@@ -11,7 +11,7 @@ from rlp.utils import ascii_chr
 
 from ethereum import blocks, db, opcodes, processblock, transactions
 from ethereum.abi import ContractTranslator
-from ethereum.config import Env, LATEST_APPLIED_FORK_BLKNUM
+from ethereum.config import Env
 from ethereum.slogging import LogRecorder
 from ethereum._solidity import get_solidity
 from ethereum.utils import to_string, sha3, privtoaddr, int_to_addr
@@ -418,25 +418,3 @@ class state(object):
         self.block.header._mutable = True
         self.block._cached_rlp = None
         self.block.header._cached_rlp = None
-
-
-def latest_state(blknum=None, **kwargs):
-    """Helper, that generates a `tester.state` instance with a block number
-    above all applied forks on the main net (depends on
-    `ethereum.config.LATEST_APPLIED_FORK_BLKNUM`).
-
-    If `blknum` is given, this number will be used as block number instead.
-
-    Returns:
-        `tester.state` instance with adjusted block number
-    """
-    blockchain_state = state(**kwargs)
-
-    if blknum is None:
-        blockchain_state.block.number = LATEST_APPLIED_FORK_BLKNUM
-    else:
-        if not isinstance(blknum, int):
-            raise ValueError("blknum must be integer")
-        blockchain_state.block.number = blknum
-
-    return blockchain_state
