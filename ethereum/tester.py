@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+import contextlib
 import shutil
 import tempfile
 import time
@@ -156,10 +157,20 @@ class ABIContract(object):  # pylint: disable=too-few-public-methods
         return kall
 
 
+@contextlib.contextmanager
+def tempdir():
+    directory = tempfile.mkdtemp()
+    try:
+        yield directory
+    except Exception as e:
+        raise e
+    finally:
+        shutil.rmtree(directory)
+
 class state(object):
 
     def __init__(self, num_accounts=len(keys)):
-        self.temp_data_dir = tempfile.mkdtemp()
+        self.temp_data_dir = tempdir()
         self.db = db.EphemDB()
         self.env = Env(self.db)
         self.last_tx = None
@@ -183,8 +194,6 @@ class state(object):
         self.block.coinbase = DEFAULT_ACCOUNT
         self.block.gas_limit = 10 ** 9
 
-    def __del__(self):
-        shutil.rmtree(self.temp_data_dir)
 
     def contract(self, sourcecode, sender=DEFAULT_KEY, endowment=0,  # pylint: disable=too-many-arguments
                  language='serpent', libraries=None, path=None,
