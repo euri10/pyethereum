@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-import contextlib
+import os
 import shutil
 import tempfile
 import time
@@ -11,7 +11,7 @@ from rlp.utils import ascii_chr
 
 from ethereum import blocks, db, opcodes, processblock, transactions
 from ethereum.abi import ContractTranslator
-from ethereum.config import Env
+from ethereum.config import Env, LATEST_APPLIED_FORK_BLKNUM
 from ethereum.slogging import LogRecorder
 from ethereum._solidity import get_solidity
 from ethereum.utils import to_string, sha3, privtoaddr, int_to_addr
@@ -157,24 +157,10 @@ class ABIContract(object):  # pylint: disable=too-few-public-methods
         return kall
 
 
-
-
-
 class state(object):
 
-    @contextlib.contextmanager
-    def tempdir(self):
-        directory = tempfile.mkdtemp()
-        try:
-            yield directory
-        except Exception as e:
-            raise e
-        finally:
-            shutil.rmtree(directory)
-
     def __init__(self, num_accounts=len(keys)):
-        with self.tempdir() as tempdir:
-            self.temp_data_dir = tempdir
+        self.temp_data_dir = tempfile.mkdtemp()
         self.db = db.EphemDB()
         self.env = Env(self.db)
         self.last_tx = None
@@ -198,6 +184,9 @@ class state(object):
         self.block.coinbase = DEFAULT_ACCOUNT
         self.block.gas_limit = 10 ** 9
 
+    def __del__(self):
+        if os.path.exists(self.temp_data_dir):
+            shutil.rmtree(self.temp_data_dir)
 
     def contract(self, sourcecode, sender=DEFAULT_KEY, endowment=0,  # pylint: disable=too-many-arguments
                  language='serpent', libraries=None, path=None,
@@ -429,3 +418,25 @@ class state(object):
         self.block.header._mutable = True
         self.block._cached_rlp = None
         self.block.header._cached_rlp = None
+
+
+def latest_state(blknum=None, **kwargs):
+    """Helper, that generates a `tester.state` instance with a block number
+    above all applied forks on the main net (depends on
+    `ethereum.config.LATEST_APPLIED_FORK_BLKNUM`).
+
+    If `blknum` is given, this number will be used as block number instead.
+
+    Returns:
+        `tester.state` instance with adjusted block number
+    """
+    blockchain_state = state(**kwargs)
+
+    if blknum is None:
+        blockchain_state.block.number = LATEST_APPLIED_FORK_BLKNUM
+    else:
+        if not isinstance(blknum, int):
+            raise ValueError("blknum must be integer")
+        blockchain_state.block.number = blknum
+
+    return blockchain_state

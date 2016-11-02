@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 import json
+import os
 from os import path
 
 import pytest
@@ -33,3 +34,10 @@ def test_abicontract_interface():
     )
 
     assert abi.test() == 1  # pylint: disable=no-member
+
+def test_removed_tmp_folder():
+    tester_state = state()
+
+    path = tester_state.temp_data_dir
+    assert os.path.exists(path)
+
