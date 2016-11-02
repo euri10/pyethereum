@@ -157,20 +157,24 @@ class ABIContract(object):  # pylint: disable=too-few-public-methods
         return kall
 
 
-@contextlib.contextmanager
-def tempdir():
-    directory = tempfile.mkdtemp()
-    try:
-        yield directory
-    except Exception as e:
-        raise e
-    finally:
-        shutil.rmtree(directory)
+
+
 
 class state(object):
 
+    @contextlib.contextmanager
+    def tempdir(self):
+        directory = tempfile.mkdtemp()
+        try:
+            yield directory
+        except Exception as e:
+            raise e
+        finally:
+            shutil.rmtree(directory)
+
     def __init__(self, num_accounts=len(keys)):
-        self.temp_data_dir = tempdir()
+        with self.tempdir() as tempdir:
+            self.temp_data_dir = tempdir
         self.db = db.EphemDB()
         self.env = Env(self.db)
         self.last_tx = None
